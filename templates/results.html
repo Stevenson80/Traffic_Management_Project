@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <h2 class="mb-4">Traffic Congestion Analysis Results</h2>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Analysis Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Location:</strong> {{ result.location }}</p>
+                        <p><strong>Date Range:</strong> {{ result.date_range_start }} to {{ result.date_range_end }}</p>
+                        <p><strong>Analysis Date:</strong> {{ result.analysis_date }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Value of Time:</strong> ₦{{ value_of_time }}/hour</p>
+                        <p><strong>Fuel Cost:</strong> ₦{{ result.fuel_cost_per_liter }}/liter</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Economic Costs</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <tr>
+                                <td>Excess Fuel Consumption</td>
+                                <td>{{ result.total_excess_fuel|round(2) }} liters</td>
+                            </tr>
+                            <tr>
+                                <td>Excess Fuel Cost</td>
+                                <td>₦{{ result.total_excess_fuel_cost|round(2) }}</td>
+                            </tr>
+                            <tr>
+                                <td>CO2 Emissions</td>
+                                <td>{{ result.total_co2_emissions|round(2) }} kg</td>
+                            </tr>
+                            <tr>
+                                <td>Productivity Loss</td>
+                                <td>₦{{ result.total_productivity_loss|round(2) }}</td>
+                            </tr>
+                            <tr class="table-primary">
+                                <td><strong>Total Economic Cost</strong></td>
+                                <td><strong>₦{{ result.total_economic_cost|round(2) }}</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Cost Distribution</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="{{ cost_chart }}" alt="Cost Distribution Chart" class="img-fluid">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>CO2 Emissions</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="{{ emission_chart }}" alt="Emission Chart" class="img-fluid">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <a href="{{ url_for('download_pdf', result_id=result.id) }}" class="btn btn-primary">Download PDF Report</a>
+            <a href="{{ url_for('analyze') }}" class="btn btn-secondary">New Analysis</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto text-center">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="text-success">Data Submitted Successfully!</h2>
+                <p>Your traffic data has been recorded successfully.</p>
+                <div class="mt-4">
+                    <a href="{{ url_for('data_entry') }}" class="btn btn-primary">Add More Data</a>
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Return to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
