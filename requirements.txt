@@ -1,4 +1,4 @@
 Flask==2.3.3
-pandas==2.0.3
+numpy==1.24.3  # pandas dependency
 matplotlib==3.7.2
 reportlab==4.0.4
