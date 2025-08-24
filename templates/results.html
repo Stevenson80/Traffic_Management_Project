@@ -34,19 +34,19 @@
                         <table class="table table-striped">
                             <tr>
                                 <td>Excess Fuel Consumption</td>
-                                <td>{{ result.total_excess_fuel|round(2) }} liters</td>
+                                <td>{{ result.total_excess_fuel|default(0)|round(2) }} liters</td>
                             </tr>
                             <tr>
                                 <td>Excess Fuel Cost</td>
-                                <td>₦{{ result.total_excess_fuel_cost|round(2) }}</td>
+                                <td>₦{{ result.total_excess_fuel_cost|default(0)|round(2) }}</td>
                             </tr>
                             <tr>
                                 <td>CO2 Emissions</td>
-                                <td>{{ result.total_co2_emissions|round(2) }} kg</td>
+                                <td>{{ result.total_co2_emissions|default(0)|round(2) }} kg</td>
                             </tr>
                             <tr>
                                 <td>Productivity Loss</td>
-                                <td>₦{{ result.total_productivity_loss|round(2) }}</td>
+                                <td>₦{{ result.total_productivity_loss|default(0)|round(2) }}</td>
                             </tr>
                             <tr class="table-primary">
                                 <td><strong>Total Economic Cost</strong></td>

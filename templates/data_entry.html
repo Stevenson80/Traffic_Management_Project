@@ -26,8 +26,8 @@
                     <label for="vehicle_type" class="form-label">Vehicle Type</label>
                     <select class="form-select" id="vehicle_type" name="vehicle_type" required>
                         <option value="">Select Vehicle Type</option>
-                        {% for vehicle in vehicle_types %}
-                        <option value="{{ vehicle.id }}">{{ vehicle.name }}</option>
+                        {% for vehicle in vehicle_types %} {# Corrected iteration #}
+                        <option value="{{ vehicle.id }}">{{ vehicle.name }}</option> {# Accessing 'id' and 'name' keys #}
                         {% endfor %}
                     </select>
                 </div>

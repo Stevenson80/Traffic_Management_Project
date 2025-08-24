@@ -1,222 +1,234 @@
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+# utils/report_generator.py
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.piecharts import Pie
 from io import BytesIO
-import matplotlib.pyplot as plt
 import base64
-
-
-def generate_rich_pdf_report(result, cost_chart, emission_chart):
-    # ... (existing code)
-
-    # Add footer with copyright
-    story.append(Spacer(1, 30))
-    footer_style = ParagraphStyle(
-        'Footer',
-        parent=styles['Normal'],
-        fontSize=9,
-        textColor=colors.gray,
-        alignment=1  # Center aligned
-    )
-    story.append(Paragraph(
-        "&copy; 2025 Traffic Management Portal. Powered by Oladotun Ajakaiye, Service Manager and Data Analyst, Opygoal Technology Ltd.",
-        footer_style))
-
-    # Build PDF
-    doc.build(story)
-    # ... (rest of existing code)
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
 
 
 def generate_pdf_report(result):
-    # ... (existing code)
+    """Generate a PDF report with charts and detailed analysis"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Try to register a font that supports the Naira symbol
+    # You might need to adjust this path or use a different font
+    try:
+        # Try to use DejaVu Sans font if available (it supports more Unicode characters)
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"  # Common Linux path
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+            normal_font = 'DejaVuSans'
+        else:
+            # Fallback to Helvetica
+            normal_font = 'Helvetica'
+    except:
+        normal_font = 'Helvetica'
+
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=1  # Center aligned
+    )
+    title = Paragraph(f"Traffic Analysis Report - {result['location']}", title_style)
+    elements.append(title)
+
+    # Date range
+    date_range = Paragraph(
+        f"Date Range: {result['date_range_start']} to {result['date_range_end']}",
+        styles['Normal']
+    )
+    elements.append(date_range)
+    elements.append(Spacer(1, 12))
+
+    # Executive Summary
+    exec_summary_style = ParagraphStyle(
+        'ExecutiveSummary',
+        parent=styles['Normal'],
+        fontSize=10,
+        spaceAfter=12,
+        leading=14
+    )
+
+    # Use HTML entities for special characters to ensure they display correctly
+    executive_summary = (
+        f"This comprehensive analysis examines traffic congestion patterns in {result['location']} during "
+        f"the period from {result['date_range_start']} to {result['date_range_end']}. The findings reveal substantial economic and "
+        f"environmental consequences resulting from traffic congestion. The analysis indicates that {result['total_excess_fuel']:.2f} "
+        f"liters of additional fuel were consumed due to congestion conditions, resulting in an estimated "
+        f"cost of N{result['total_excess_fuel_cost']:,.2f}. This excessive fuel consumption contributed to {result['total_co2_emissions']:.2f} kg "
+        f"of avoidable CO&#8322; emissions, representing a significant environmental impact. From a socioeconomic perspective, "
+        f"productivity losses amounted to N{result['total_productivity_loss']:,.2f}, calculated based on a value of time of "
+        f"N{result['value_of_time']:,.2f}/hour. The comprehensive Total Economic Cost of congestion for this timeframe and "
+        f"location is estimated at N{result['total_economic_cost']:,.2f}. These findings underscore the multifaceted costs "
+        f"associated with traffic congestion, highlighting the urgent need for strategic interventions to "
+        f"mitigate both economic losses and environmental damage."
+    )
+
+    elements.append(Paragraph("Executive Summary", styles['Heading2']))
+    elements.append(Paragraph(executive_summary, exec_summary_style))
+    elements.append(Spacer(1, 20))
+
+    # Summary table - use 'N' instead of the symbol for better compatibility
+    summary_data = [
+        ['Metric', 'Value'],
+        ['Total Excess Fuel', f"{result['total_excess_fuel']:.2f} liters"],
+        ['Excess Fuel Cost', f"N{result['total_excess_fuel_cost']:,.2f}"],
+        ['CO2 Emissions', f"{result['total_co2_emissions']:.2f} kg"],
+        ['Productivity Loss', f"N{result['total_productivity_loss']:,.2f}"],
+        ['Total Economic Cost', f"N{result['total_economic_cost']:,.2f}"],
+        ['Total Vehicles Analyzed', f"{result['total_vehicles']}"]
+    ]
+
+    summary_table = Table(summary_data, colWidths=[2.5 * inch, 2 * inch])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 20))
+
+    # Add cost distribution chart if available
+    if result.get('cost_chart'):
+        try:
+            elements.append(Paragraph("Cost Distribution", styles['Heading2']))
+
+            # Chart interpretation
+            fuel_percentage = (result['total_excess_fuel_cost'] / result['total_economic_cost'] * 100) if result[
+                                                                                                              'total_economic_cost'] > 0 else 0
+            productivity_percentage = (result['total_productivity_loss'] / result['total_economic_cost'] * 100) if \
+            result['total_economic_cost'] > 0 else 0
+
+            chart_interpretation = (
+                f"The cost distribution analysis reveals that productivity losses account for {productivity_percentage:.1f}% "
+                f"of the total economic cost (N{result['total_productivity_loss']:,.2f}), while fuel costs represent {fuel_percentage:.1f}% "
+                f"(N{result['total_excess_fuel_cost']:,.2f}). This indicates that the primary economic impact of congestion "
+                f"is through lost productivity rather than direct fuel expenses."
+            )
+            elements.append(Paragraph(chart_interpretation, exec_summary_style))
+            elements.append(Spacer(1, 12))
+
+            # Decode the base64 chart image
+            chart_data = result['cost_chart'].split(',')[1] if ',' in result['cost_chart'] else result['cost_chart']
+            chart_img = Image(BytesIO(base64.b64decode(chart_data)), width=5 * inch, height=3 * inch)
+            elements.append(chart_img)
+            elements.append(Spacer(1, 12))
+        except Exception as e:
+            print(f"Error adding cost chart to PDF: {e}")
+
+    # Add emission chart if available
+    if result.get('emission_chart'):
+        try:
+            elements.append(Paragraph("CO2 Emissions Impact", styles['Heading2']))
+
+            # Emission interpretation
+            emission_interpretation = (
+                f"The traffic congestion during the analyzed period resulted in {result['total_co2_emissions']:.2f} kg "
+                f"of additional CO&#8322; emissions. This environmental impact represents the carbon footprint equivalent "
+                f"of the excess fuel consumption caused by congestion conditions."
+            )
+            elements.append(Paragraph(emission_interpretation, exec_summary_style))
+            elements.append(Spacer(1, 12))
+
+            # Decode the base64 chart image
+            chart_data = result['emission_chart'].split(',')[1] if ',' in result['emission_chart'] else result[
+                'emission_chart']
+            chart_img = Image(BytesIO(base64.b64decode(chart_data)), width=5 * inch, height=3 * inch)
+            elements.append(chart_img)
+        except Exception as e:
+            print(f"Error adding emission chart to PDF: {e}")
+
+    # Add detailed breakdown
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("Detailed Breakdown", styles['Heading2']))
+
+    detailed_data = [
+        ['Fuel Type', 'Excess Fuel (L)', 'Cost (N)', 'CO2 Emissions (kg)'],
+        ['Petrol', f"{result['excess_fuel_petrol']:.2f}", f"{result['fuel_cost_petrol']:,.2f}",
+         f"{result['co2_emissions_petrol']:.2f}"],
+        ['Diesel', f"{result['excess_fuel_diesel']:.2f}", f"{result['fuel_cost_diesel']:,.2f}",
+         f"{result['co2_emissions_diesel']:.2f}"],
+        ['Total', f"{result['total_excess_fuel']:.2f}", f"{result['total_excess_fuel_cost']:,.2f}",
+         f"{result['total_co2_emissions']:.2f}"]
+    ]
+
+    detailed_table = Table(detailed_data, colWidths=[1.5 * inch, 1.5 * inch, 1.5 * inch, 1.5 * inch])
+    detailed_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -2), colors.beige),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(detailed_table)
+
+    # Add analysis parameters
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("Analysis Parameters", styles['Heading2']))
+
+    params_data = [
+        ['Parameter', 'Value'],
+        ['Value of Time (N/hour)', f"{result['value_of_time']:,.2f}"],
+        ['Petrol Price (N/liter)', f"{result['petrol_price']:,.2f}"],
+        ['Diesel Price (N/liter)', f"{result['diesel_price']:,.2f}"],
+        ['Free Flow Speed (km/h)', f"{result['free_flow_speed']:,.1f}"],
+        ['Analysis Date', result['analysis_date']]
+    ]
+
+    params_table = Table(params_data, colWidths=[2 * inch, 2 * inch])
+    params_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(params_table)
 
     # Add footer with copyright
     elements.append(Spacer(1, 30))
     footer_style = ParagraphStyle(
         'Footer',
         parent=styles['Normal'],
-        fontSize=9,
-        textColor=colors.gray,
-        alignment=1  # Center aligned
+        fontSize=8,
+        alignment=1,  # Center aligned
+        textColor=colors.grey
     )
-    elements.append(Paragraph(
-        "&copy; 2025 Traffic Management Portal. Powered by Oladotun Ajakaiye, Service Manager and Data Analyst, Opygoal Technology Ltd.",
-        footer_style))
-
-    doc.build(elements)
-    # ... (rest of existing code)
-
-
-def generate_rich_pdf_report(result, cost_chart, emission_chart):
-    """
-    Generate a rich PDF report that matches the web interface
-    """
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-                            rightMargin=72, leftMargin=72,
-                            topMargin=72, bottomMargin=18)
-
-    styles = getSampleStyleSheet()
-    story = []
-
-    # Title
-    title_style = ParagraphStyle(
-        'Title',
-        parent=styles['Title'],
-        fontSize=24,
-        spaceAfter=30,
-        alignment=1  # Center aligned
+    footer = Paragraph(
+        "© 2025 Traffic Management Portal. Powered by Oladotun Ajakaiye, Service Manager & Data Analyst, Opygoal Technology Ltd.",
+        footer_style
     )
-    story.append(Paragraph("Traffic Congestion Economic Cost Report", title_style))
-
-    # Summary section
-    summary_style = ParagraphStyle(
-        'Summary',
-        parent=styles['Normal'],
-        fontSize=12,
-        spaceAfter=12
-    )
-
-    story.append(Paragraph(f"<b>Location:</b> {result['location']}", summary_style))
-    story.append(
-        Paragraph(f"<b>Date Range:</b> {result['date_range_start']} to {result['date_range_end']}", summary_style))
-    story.append(Paragraph(f"<b>Analysis Date:</b> {result['analysis_date']}", summary_style))
-    story.append(Paragraph(f"<b>Value of Time:</b> ₦{result['value_of_time']}/hour", summary_style))
-    story.append(Paragraph(f"<b>Fuel Cost:</b> ₦{result['fuel_cost_per_liter']}/liter", summary_style))
-
-    story.append(Spacer(1, 20))
-
-    # Economic Costs Table
-    story.append(Paragraph("<b>Economic Costs</b>", styles['Heading2']))
-
-    cost_data = [
-        ['Metric', 'Value', 'Unit'],
-        ['Excess Fuel Consumption', f"{result['total_excess_fuel']:,.2f}", 'Liters'],
-        ['Excess Fuel Cost', f"₦{result['total_excess_fuel_cost']:,.2f}", 'Naira'],
-        ['CO2 Emissions', f"{result['total_co2_emissions']:,.2f}", 'kg'],
-        ['Productivity Loss', f"₦{result['total_productivity_loss']:,.2f}", 'Naira'],
-        ['Total Economic Cost', f"<b>₦{result['total_economic_cost']:,.2f}</b>", 'Naira']
-    ]
-
-    table = Table(cost_data, colWidths=[2.5 * inch, 1.5 * inch, 1 * inch])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#343a40')),  # Dark background for header
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -2), colors.HexColor('#f8f9fa')),  # Light background for data
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e9ecef')),  # Different background for total
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 11),
-        ('TOPPADDING', (0, 1), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, -1), (-1, -1), 12),
-        ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
-    ]))
-
-    story.append(table)
-    story.append(Spacer(1, 20))
-
-    # Cost Distribution Chart
-    story.append(Paragraph("<b>Cost Distribution</b>", styles['Heading2']))
-
-    # Convert base64 chart to image for PDF
-    cost_chart_data = cost_chart.split(',')[1]  # Remove the data:image/png;base64, part
-    cost_img_data = BytesIO(base64.b64decode(cost_chart_data))
-
-    # Create a matplotlib figure from the image data
-    cost_img = plt.imread(cost_img_data)
-    plt.figure(figsize=(6, 4))
-    plt.imshow(cost_img)
-    plt.axis('off')
-
-    # Save as a temporary image file
-    temp_cost_path = "temp_cost_chart.png"
-    plt.savefig(temp_cost_path, bbox_inches='tight', pad_inches=0.1)
-    plt.close()
-
-    # Add image to PDF
-    cost_image = Image(temp_cost_path, width=4 * inch, height=3 * inch)
-    cost_image.hAlign = 'CENTER'
-    story.append(cost_image)
-    story.append(Spacer(1, 15))
-
-    # CO2 Emissions Chart
-    story.append(Paragraph("<b>CO2 Emissions</b>", styles['Heading2']))
-
-    # Convert base64 chart to image for PDF
-    emission_chart_data = emission_chart.split(',')[1]  # Remove the data:image/png;base64, part
-    emission_img_data = BytesIO(base64.b64decode(emission_chart_data))
-
-    # Create a matplotlib figure from the image data
-    emission_img = plt.imread(emission_img_data)
-    plt.figure(figsize=(6, 4))
-    plt.imshow(emission_img)
-    plt.axis('off')
-
-    # Save as a temporary image file
-    temp_emission_path = "temp_emission_chart.png"
-    plt.savefig(temp_emission_path, bbox_inches='tight', pad_inches=0.1)
-    plt.close()
-
-    # Add image to PDF
-    emission_image = Image(temp_emission_path, width=4 * inch, height=3 * inch)
-    emission_image.hAlign = 'CENTER'
-    story.append(emission_image)
+    elements.append(footer)
 
     # Build PDF
-    doc.build(story)
-
-    buffer.seek(0)
-    return buffer
-
-
-def generate_pdf_report(result):
-    """
-    Original basic PDF report (fallback)
-    """
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    elements = []
-
-    styles = getSampleStyleSheet()
-    elements.append(Paragraph("Traffic Congestion Economic Cost Report", styles['Title']))
-    elements.append(Paragraph(f"Location: {result['location']}", styles['Normal']))
-    elements.append(
-        Paragraph(f"Date Range: {result['date_range_start']} to {result['date_range_end']}", styles['Normal']))
-    elements.append(Paragraph(f"Analysis Date: {result['analysis_date']}", styles['Normal']))
-
-    # Add a table with the results
-    data = [
-        ['Metric', 'Value', 'Unit'],
-        ['Excess Fuel Consumption', f"{result['total_excess_fuel']:,.2f}", 'Liters'],
-        ['Excess Fuel Cost', f"₦{result['total_excess_fuel_cost']:,.2f}", 'Naira'],
-        ['CO2 Emissions', f"{result['total_co2_emissions']:,.2f}", 'kg'],
-        ['Productivity Loss', f"₦{result['total_productivity_loss']:,.2f}", 'Naira'],
-        ['Total Economic Cost', f"₦{result['total_economic_cost']:,.2f}", 'Naira']
-    ]
-
-    table = Table(data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 14),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 12),
-        ('TOPPADDING', (0, 1), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, -1), (-1, -1), 12),
-    ]))
-
-    elements.append(table)
     doc.build(elements)
-
     buffer.seek(0)
     return buffer
+
+
+def generate_rich_pdf_report(result):
+    """Alias for generate_pdf_report for backward compatibility"""
+    return generate_pdf_report(result)

@@ -2,10 +2,11 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-8 mx-auto">
+    <div class="col-md-10 mx-auto">
         <h2 class="mb-4">Analyze Traffic Congestion</h2>
 
         <form method="post">
+            <!-- Basic Parameters -->
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="location" class="form-label">Location</label>
@@ -17,11 +18,13 @@
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label for="value_of_time" class="form-label">Value of Time (Naira/hour)</label>
-                    <input type="number" step="0.1" class="form-control" id="value_of_time" name="value_of_time" value="50" required>
+                    <label for="value_of_time" class="form-label">Value of Time (₦/hour)</label>
+                    <input type="number" step="0.1" class="form-control" id="value_of_time" name="value_of_time" value="2000" required>
+                    <div class="form-text">Economic value of one hour of travel time</div>
                 </div>
             </div>
 
+            <!-- Date Range -->
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="start_date" class="form-label">Start Date</label>
@@ -30,6 +33,23 @@
                 <div class="col-md-6">
                     <label for="end_date" class="form-label">End Date</label>
                     <input type="date" class="form-control" id="end_date" name="end_date" required>
+                </div>
+            </div>
+
+            <!-- NEW: Economic Parameters -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="petrol_price" class="form-label">Petrol Price (₦/liter)</label>
+                    <input type="number" step="0.01" class="form-control" id="petrol_price" name="petrol_price" value="150" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="diesel_price" class="form-label">Diesel Price (₦/liter)</label>
+                    <input type="number" step="0.01" class="form-control" id="diesel_price" name="diesel_price" value="200" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="free_flow_speed" class="form-label">Free-Flow Speed (km/h)</label>
+                    <input type="number" step="0.1" class="form-control" id="free_flow_speed" name="free_flow_speed" value="80" required>
+                    <div class="form-text">Typical speed without congestion</div>
                 </div>
             </div>
 
